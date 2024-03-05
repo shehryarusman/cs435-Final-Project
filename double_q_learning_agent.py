@@ -5,7 +5,7 @@ def flipCoin():
     r = random.random()
     return r < 0.5
 
-class QLearningAgent:
+class DoubleQLearningAgent:
     def __init__(self, state_space_size, action_space_size, learning_rate=0.1, discount_rate=0.95, exploration_rate=1.0, exploration_decay=0.99, min_exploration_rate=0.01):
         self.state_space_size = state_space_size
         self.action_space_size = action_space_size
