@@ -9,6 +9,16 @@ class Game:
         self._generate_bullets()
         self.dealerDecision = None
 
+    def _generate_bullets_ppo(self):
+        live_bullets = random.randint(1, self.total_bullets)
+        blank_bullets = self.total_bullets - live_bullets
+        self.bullets = [1] * live_bullets + [0] * blank_bullets
+        random.shuffle(self.bullets)
+        self.current_bullet_index = 0
+        self.rounds += 1
+        
+        return live_bullets, blank_bullets
+
     def _generate_bullets(self):
         live_bullets = random.randint(1, self.total_bullets)
         blank_bullets = self.total_bullets - live_bullets
@@ -23,6 +33,18 @@ class Game:
         self._generate_bullets()
         self.rounds = 0
         self.current_bullet_index = 0
+
+    def reset_ppo(self):
+        self.player_lives = 3
+        self.dealer_lives = 3
+        l, b = self._generate_bullets_ppo()
+        self.rounds = 0
+        self.current_bullet_index = 0
+        
+        return (self.player_lives,
+            self.dealer_lives,
+            l,
+            b)
 
     def dealer_decision(self):
         if len(self.bullets) - self.current_bullet_index == 1:
