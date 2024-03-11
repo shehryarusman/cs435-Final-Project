@@ -2,25 +2,45 @@ from q_learning_agent import QLearningAgent
 import numpy as np
 from game import Game
 import time
+import matplotlib.pyplot as plt
 
 max_lives = 3
 total_bullets = 4
 
-def encode_state(player_lives, dealer_lives, live_bullets, blank_bullets):
-    return (player_lives +
-            dealer_lives +
-            live_bullets +
-            blank_bullets)
+def calculate_base(offsets):
+    base = [1]
+    for offset in offsets[:-1]:
+        base.append(base[-1] * offset)
+    return base[::-1]
 
-def train_agent(episodes=1000, test_episodes=1):
-    state_space_size = ((max_lives) + (max_lives) + (total_bullets) + (total_bullets))
+def encode_state(player_lives, dealer_lives, live_bullets, blank_bullets):
+    total_bullets_remaining = live_bullets + blank_bullets
+    probability_live_next = int((live_bullets / total_bullets_remaining if total_bullets_remaining > 0 else 0)*100)
+    probability_blank_next = int((blank_bullets / total_bullets_remaining if total_bullets_remaining > 0 else 0)*100)
+
+    offsets = [max_lives + 1, max_lives + 1, 101, 101]
+    base = calculate_base(offsets)
+
+    state_index = (player_lives + dealer_lives + probability_live_next + probability_blank_next) * base
+
+    return state_index
+
+def train_agent(episodes=1000, test_episodes=0):
+    state_space_size = ((max_lives) * (max_lives) * (100) * (100))
     action_space_size = 2
+    total_reward=0
     agent = QLearningAgent(state_space_size, action_space_size)
     game = Game()
     
     learning_player_wins = 0
     testing_player_wins = 0
     random_agent_wins = 0
+    
+    shoot_dealer_count = 0
+    shoot_self_count = 0
+
+    total_rewards = [] 
+    action_counts = {'shoot_dealer': [], 'shoot_self': []}
 
     for episode in range(episodes):
         game.reset()
@@ -32,27 +52,18 @@ def train_agent(episodes=1000, test_episodes=1):
             agent.exploration_rate = 0
         
         while not game.is_over():
-            if episode >= episodes - test_episodes:
-                print("*" * 20)
             action = agent.choose_action(state_encoded)
-            if episode >= episodes - test_episodes:
-                print(f"Episode {episode + 1}:")
-                print(f"Live Bullets: {game.bullets.count(1)} and Blank Bullets: {game.bullets.count(0)}")
-                print(f"Current State: Bullet Index {game.current_bullet_index}, Player Lives {game.player_lives}, Dealer Lives {game.dealer_lives}, Rounds {game.rounds}")
-                print(f"Agent Action: {'Shoot Dealer' if action == 1 else 'Shoot Self'}")
-                print(f"Bullet was {'live' if game.bullets[game.current_bullet_index] else 'blank'}")
-                print("-" * 20)
-                time.sleep(2)
+            
+            # Increment counters based on the action chosen by the agent
+            if action == 0:
+                shoot_self_count += 1
+            else:
+                shoot_dealer_count += 1
+            
             reward, game_over, next_state = game.play_step(action)
             next_state_encoded = encode_state(*next_state)
-            if episode >= episodes - test_episodes:
-                print(f"Dealer Action: {'Shoot Agent' if game.getDealerDecision() == 1 else 'Shoot Self'}")
-                print(f"Bullet was {'live' if game.bullets[game.current_bullet_index] else 'blank'}")
-                print(f"Player lives now {game.player_lives} and dealer lives now {game.dealer_lives}")
-                print(f"Reward: {reward}")
-                print("-" * 20)
-                time.sleep(2) 
-
+            total_reward += reward
+            
             if episode < episodes - test_episodes:
                 agent.update_q_table(state_encoded, action, next_state_encoded, reward)
             
@@ -67,6 +78,9 @@ def train_agent(episodes=1000, test_episodes=1):
             else:
                 learning_player_wins += 1
 
+        total_rewards.append(total_reward)
+        action_counts['shoot_dealer'].append(shoot_dealer_count)
+        action_counts['shoot_self'].append(shoot_self_count)
         game.reset()
         while not game.is_over():
             action = np.random.choice(action_space_size)
@@ -79,11 +93,31 @@ def train_agent(episodes=1000, test_episodes=1):
             random_agent_wins += 1
 
     print(f"Learning Phase Wins (Q-learning): {learning_player_wins} ({(learning_player_wins/(episodes - test_episodes))*100:.2f}%)")
-    print(f"Testing Phase Wins (Q-learning): {testing_player_wins} ({(testing_player_wins/test_episodes)*100:.2f}%)")
+    if test_episodes > 0:
+        print(f"Testing Phase Wins (Q-learning): {testing_player_wins} ({(testing_player_wins/test_episodes)*100:.2f}%)")
     print(f"Random Agent Wins: {random_agent_wins} ({(random_agent_wins/episodes)*100:.2f}%)")
+    print(f"Agent chose 'Shoot Dealer' {shoot_dealer_count} times.")
+    print(f"Agent chose 'Shoot Self' {shoot_self_count} times.")
+
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(total_rewards)
+    plt.title('Total Rewards per Episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+
+    plt.subplot(1, 2, 2)
+    plt.plot(action_counts['shoot_dealer'], label='Shoot Dealer')
+    plt.plot(action_counts['shoot_self'], label='Shoot Self')
+    plt.title('Action Selection Over Episodes')
+    plt.xlabel('Episode')
+    plt.ylabel('Count')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
 
     np.savetxt("data.txt", agent.q_table, fmt='%f')
-
 
 if __name__ == "__main__":
     train_agent()
