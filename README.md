@@ -1,3 +1,1 @@
-Final Project for CS435 - Reinforcement Learning
-
-
+Final Project for CS486 - Reinforcement Learning
