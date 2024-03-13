@@ -5,7 +5,6 @@ import time
 import matplotlib.pyplot as plt
 
 max_lives = 3
-total_bullets = 4
 
 def calculate_base(offsets):
     base = [1]
@@ -26,11 +25,13 @@ def encode_state(player_lives, dealer_lives, live_bullets, blank_bullets):
     return state_index
 
 def train_agent(episodes=1000, test_episodes=0):
+
+    game = Game()
+    total_bullets = game.getTotalBullets()
     state_space_size = ((max_lives) * (max_lives) * (100) * (100))
     action_space_size = 2
     total_reward=0
     agent = QLearningAgent(state_space_size, action_space_size)
-    game = Game()
     
     learning_player_wins = 0
     testing_player_wins = 0

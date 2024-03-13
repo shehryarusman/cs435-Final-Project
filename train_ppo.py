@@ -6,6 +6,7 @@ from network import FeedForwardNN
 from game import Game
 import numpy as np
 import time
+from plotPPO import plotPPO
 
 max_lives = 3
 total_bullets = 4
@@ -14,6 +15,8 @@ def train(actor_model='', critic_model=''):
     state_space_size = 4
     action_space_size = 2
     game = Game()
+    rewards_per_game = []
+    win_or_loss=[]
     print(f"Training", flush=True)
 
     model = PPO(FeedForwardNN, game, action_space_size, state_space_size)
@@ -35,6 +38,7 @@ def train(actor_model='', critic_model=''):
     testing_player_wins = 0
     for i in range(100):
         game.reset()
+        total_reward=0
         initial_state = game.get_initial_state()
         initial_state = np.array(initial_state, dtype=np.float64)
         curr_state = initial_state.reshape((1,4))
@@ -43,6 +47,7 @@ def train(actor_model='', critic_model=''):
         while not game.is_over():
             action, _ = model.get_action(curr_state)
             reward, game_over, next_state = game.play_step(np.argmax(action))
+            total_reward+=reward
             # print(f"Live Bullets: {game.bullets.count(1)} and Blank Bullets: {game.bullets.count(0)}")
             # print(f"Current State: Bullet Index {game.current_bullet_index}, Player Lives {game.player_lives}, Dealer Lives {game.dealer_lives}, Rounds {game.rounds}")
             # print(f"Agent Action: {'Shoot Dealer' if np.argmax(action) == 1 else 'Shoot Self'}")
@@ -57,8 +62,12 @@ def train(actor_model='', critic_model=''):
             # time.sleep(2)
             
             if game_over:
+                rewards_per_game.append(total_reward)
                 if game.player_lives > game.dealer_lives:
                     testing_player_wins += 1
+                    win_or_loss.append(1)
+                else:
+                    win_or_loss.append(0)
                 break
             
             curr_state = next_state
@@ -68,7 +77,10 @@ def train(actor_model='', critic_model=''):
             
     
     print(f"Testing Phase Wins: {testing_player_wins} ({(testing_player_wins/100)*100:.2f}%)")
+
+    return win_or_loss, rewards_per_game
     
     
 if __name__ == "__main__":
-    train('ppo_actor.pth', 'ppo_critic.pth')
+    testingWins, rewardsPerGame = train('ppo_actor.pth', 'ppo_critic.pth')
+    plotPPO(testingWins, rewardsPerGame)

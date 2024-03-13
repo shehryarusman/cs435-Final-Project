@@ -2,13 +2,16 @@ import random
 
 class Game:
     def __init__(self, verbose=False):
-        self.total_bullets = 4
+        self.total_bullets = random.randint(1,8)
         self.player_lives = 3
         self.dealer_lives = 3
         self.rounds = 0
         self.verbose = verbose
         self._generate_bullets(initial=True)
         self.dealerDecision = None
+
+    def getTotalBullets(self):
+        return self.total_bullets
     def print_verbose(self, *args, **kwargs):
             if self.verbose:
                 print("\n--------------------------------------------------")
@@ -24,7 +27,7 @@ class Game:
         self.rounds += 1
         
         return live_bullets, blank_bullets
-    def _generate_bullets(self):
+    def _generate_bullets(self, initial=True):
         live_bullets = random.randint(1, self.total_bullets)
         blank_bullets = self.total_bullets - live_bullets
         self.bullets = [1] * live_bullets + [0] * blank_bullets
